@@ -20,11 +20,11 @@
 # author @resouer @WIZARD-CXY
 set -e
 
-function cleanup {
+#function cleanup {
   # cleanup work
-  rm -rf flannel* kubernetes* etcd* binaries
-}
-trap cleanup SIGHUP SIGINT SIGTERM
+#  rm -rf flannel* kubernetes* etcd* binaries
+#}
+#trap cleanup SIGHUP SIGINT SIGTERM
 
 pushd $(dirname $0)
 mkdir -p binaries/master
@@ -34,10 +34,10 @@ mkdir -p binaries/minion
 FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.5"}
 echo "Prepare flannel ${FLANNEL_VERSION} release ..."
 grep -q "^${FLANNEL_VERSION}\$" binaries/.flannel 2>/dev/null || {
-  curl -L  https://github.com/coreos/flannel/releases/download/v${FLANNEL_VERSION}/flannel-${FLANNEL_VERSION}-linux-amd64.tar.gz -o flannel.tar.gz
-  tar xzf flannel.tar.gz
-  cp flannel-${FLANNEL_VERSION}/flanneld binaries/master
-  cp flannel-${FLANNEL_VERSION}/flanneld binaries/minion
+#  curl -L  https://github.com/coreos/flannel/releases/download/v${FLANNEL_VERSION}/flannel-${FLANNEL_VERSION}-linux-amd64.tar.gz -o flannel.tar.gz
+#  tar xzf flannel.tar.gz
+#  cp flannel-${FLANNEL_VERSION}/flanneld binaries/master
+#  cp flannel-${FLANNEL_VERSION}/flanneld binaries/minion
   echo ${FLANNEL_VERSION} > binaries/.flannel
 }
 
@@ -46,9 +46,9 @@ ETCD_VERSION=${ETCD_VERSION:-"2.3.1"}
 ETCD="etcd-v${ETCD_VERSION}-linux-amd64"
 echo "Prepare etcd ${ETCD_VERSION} release ..."
 grep -q "^${ETCD_VERSION}\$" binaries/.etcd 2>/dev/null || {
-  curl -L https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/${ETCD}.tar.gz -o etcd.tar.gz
-  tar xzf etcd.tar.gz
-  cp ${ETCD}/etcd ${ETCD}/etcdctl binaries/master
+#  curl -L https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/${ETCD}.tar.gz -o etcd.tar.gz
+#  tar xzf etcd.tar.gz
+#  cp ${ETCD}/etcd ${ETCD}/etcdctl binaries/master
   echo ${ETCD_VERSION} > binaries/.etcd
 }
 
@@ -71,21 +71,21 @@ fi
 # k8s
 echo "Prepare kubernetes ${KUBE_VERSION} release ..."
 grep -q "^${KUBE_VERSION}\$" binaries/.kubernetes 2>/dev/null || {
-  curl -L https://github.com/kubernetes/kubernetes/releases/download/v${KUBE_VERSION}/kubernetes.tar.gz -o kubernetes.tar.gz
-  tar xzf kubernetes.tar.gz
-  pushd kubernetes/server
-  tar xzf kubernetes-server-linux-amd64.tar.gz
-  popd
-  cp kubernetes/server/kubernetes/server/bin/kube-apiserver \
-     kubernetes/server/kubernetes/server/bin/kube-controller-manager \
-     kubernetes/server/kubernetes/server/bin/kube-scheduler binaries/master
-  cp kubernetes/server/kubernetes/server/bin/kubelet \
-     kubernetes/server/kubernetes/server/bin/kube-proxy binaries/minion
-  cp kubernetes/server/kubernetes/server/bin/kubectl binaries/
+#  curl -L https://github.com/kubernetes/kubernetes/releases/download/v${KUBE_VERSION}/kubernetes.tar.gz -o kubernetes.tar.gz
+#  tar xzf kubernetes.tar.gz
+#  pushd kubernetes/server
+#  tar xzf kubernetes-server-linux-amd64.tar.gz
+#  popd
+#  cp kubernetes/server/kubernetes/server/bin/kube-apiserver \
+#     kubernetes/server/kubernetes/server/bin/kube-controller-manager \
+#     kubernetes/server/kubernetes/server/bin/kube-scheduler binaries/master
+#  cp kubernetes/server/kubernetes/server/bin/kubelet \
+#     kubernetes/server/kubernetes/server/bin/kube-proxy binaries/minion
+#  cp kubernetes/server/kubernetes/server/bin/kubectl binaries/
   echo ${KUBE_VERSION} > binaries/.kubernetes
 }
 
-rm -rf flannel* kubernetes* etcd*
+#rm -rf flannel* kubernetes* etcd*
 
 echo "Done! All your binaries locate in kubernetes/cluster/ubuntu/binaries directory"
 popd

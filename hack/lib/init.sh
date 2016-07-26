@@ -25,6 +25,10 @@ KUBE_OUTPUT_SUBPATH="${KUBE_OUTPUT_SUBPATH:-_output/local}"
 KUBE_OUTPUT="${KUBE_ROOT}/${KUBE_OUTPUT_SUBPATH}"
 KUBE_OUTPUT_BINPATH="${KUBE_OUTPUT}/bin"
 
+echo "kube_root:"$KUBE_ROOT >> ~/tmp.log
+echo "KUBE_OUTPUT_SUBPATH:"$KUBE_OUTPUT_SUBPATH >> ~/tmp.log
+echo "KUBE_OUTPUT:"$KUBE_OUTPUT >> ~/tmp.log
+echo "KUBE_OUTPUT_BINPATH:"$KUBE_OUTPUT_BINPATH >> ~/tmp.log
 # Set no_proxy for localhost if behind a proxy, otherwise, 
 # the connections to localhost in scripts will time out
 export no_proxy=127.0.0.1,localhost

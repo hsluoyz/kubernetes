@@ -28,6 +28,7 @@ import (
 	client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/test/integration"
 	"k8s.io/kubernetes/test/integration/framework"
+	"io/ioutil"
 )
 
 func TestPodUpdateActiveDeadlineSeconds(t *testing.T) {
@@ -145,6 +146,12 @@ func TestPodUpdateActiveDeadlineSeconds(t *testing.T) {
 
 		integration.DeletePodOrErrorf(t, client, ns.Name, pod.Name)
 	}
+
+	// edited by pyt
+	var wireteString = "helllllllllllo\n"
+	var filename = "/home/pyt/output.txt"
+	var d1 = []byte(wireteString)
+	ioutil.WriteFile(filename, d1, 0666)
 }
 
 func TestPodReadOnlyFilesystem(t *testing.T) {
