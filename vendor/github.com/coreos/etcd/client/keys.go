@@ -29,6 +29,10 @@ import (
 	"github.com/coreos/etcd/pkg/pathutil"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/net/context"
+
+	"runtime"
+	"os"
+	"io"
 )
 
 const (
@@ -345,7 +349,44 @@ func (k *httpKeysAPI) Set(ctx context.Context, key, val string, opts *SetOptions
 	return unmarshalHTTPResponse(resp.StatusCode, resp.Header, body)
 }
 
+func getSubject(start int, end int) string {
+	subject := ""
+
+	for i := start; i < end; i ++ {
+		pc, _, line, ok := runtime.Caller(i)
+		if (ok == true) {
+			// log.Printf("%d, %s, %s, %d\n", i, file, runtime.FuncForPC(pc).Name(), line)
+			tmp := fmt.Sprintf("%s, %d", runtime.FuncForPC(pc).Name(), line)
+			//if (i != start) {
+			subject += "\n"
+			//}
+			subject += tmp
+		} else {
+			break
+		}
+	}
+	// log.Println(subject)
+	return subject
+}
+
+func printAccessVector(object string, action string, subject string) {
+	filename := "/k8slog/vectors.txt"
+	content := fmt.Sprintf("%s, %s, %s\n\n", object, action, subject)
+
+	f, err := os.OpenFile(filename, os.O_CREATE | os.O_APPEND | os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+	n, err := io.WriteString(f, content)
+	n = n
+	if err != nil {
+		panic(err)
+	}
+	f.Close()
+}
+
 func (k *httpKeysAPI) Create(ctx context.Context, key, val string) (*Response, error) {
+	printAccessVector(key, "Create", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevNoExist})
 }
 
@@ -369,6 +410,7 @@ func (k *httpKeysAPI) CreateInOrder(ctx context.Context, dir, val string, opts *
 }
 
 func (k *httpKeysAPI) Update(ctx context.Context, key, val string) (*Response, error) {
+	printAccessVector(key, "Update", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevExist})
 }
 
@@ -385,6 +427,7 @@ func (k *httpKeysAPI) Delete(ctx context.Context, key string, opts *DeleteOption
 		act.Recursive = opts.Recursive
 	}
 
+	printAccessVector(key, "Delete", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -405,6 +448,7 @@ func (k *httpKeysAPI) Get(ctx context.Context, key string, opts *GetOptions) (*R
 		act.Quorum = opts.Quorum
 	}
 
+	printAccessVector(key, "Get", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -426,6 +470,7 @@ func (k *httpKeysAPI) Watcher(key string, opts *WatcherOptions) Watcher {
 		}
 	}
 
+	printAccessVector(key, "Watch", getSubject(2, 30))
 	return &httpWatcher{
 		client:   k.client,
 		nextWait: act,
