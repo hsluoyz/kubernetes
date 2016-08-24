@@ -371,7 +371,7 @@ func getSubject(start int, end int) string {
 }
 
 func printAccessVector(object string, action string, subject string) {
-	filename := "/k8slog/vectors.txt"
+	filename := "/home/pyt/k8slog/vectors.txt"
 	content := fmt.Sprintf("%s, %s, %s\n\n", object, action, subject)
 
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
@@ -387,7 +387,7 @@ func printAccessVector(object string, action string, subject string) {
 }
 
 func (k *httpKeysAPI) Create(ctx context.Context, key, val string) (*Response, error) {
-	printAccessVector(key, "Create", getSubject(2, 30))
+	// printAccessVector(key, "Create", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevNoExist})
 }
 
@@ -412,7 +412,7 @@ func (k *httpKeysAPI) CreateInOrder(ctx context.Context, dir, val string, opts *
 }
 
 func (k *httpKeysAPI) Update(ctx context.Context, key, val string) (*Response, error) {
-	printAccessVector(key, "Update", getSubject(2, 30))
+	// printAccessVector(key, "Update", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevExist})
 }
 
@@ -430,7 +430,7 @@ func (k *httpKeysAPI) Delete(ctx context.Context, key string, opts *DeleteOption
 		act.Recursive = opts.Recursive
 	}
 
-	printAccessVector(key, "Delete", getSubject(2, 30))
+	// printAccessVector(key, "Delete", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -452,7 +452,7 @@ func (k *httpKeysAPI) Get(ctx context.Context, key string, opts *GetOptions) (*R
 		act.Quorum = opts.Quorum
 	}
 
-	printAccessVector(key, "Get", getSubject(2, 30))
+	// printAccessVector(key, "Get", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -475,7 +475,7 @@ func (k *httpKeysAPI) Watcher(key string, opts *WatcherOptions) Watcher {
 		}
 	}
 
-	printAccessVector(key, "Watch", getSubject(2, 30))
+	// printAccessVector(key, "Watch", getSubject(2, 30))
 	return &httpWatcher{
 		client:   k.client,
 		nextWait: act,
