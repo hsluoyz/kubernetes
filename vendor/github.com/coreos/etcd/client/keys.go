@@ -378,7 +378,8 @@ func printAccessVector(object string, action string, subject string) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = io.WriteString(f, content)
+	n, err := io.WriteString(f, content)
+	n = n
 	if err != nil {
 		panic(err)
 	}
