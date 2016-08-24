@@ -29,6 +29,10 @@ import (
 	"github.com/coreos/etcd/pkg/pathutil"
 	"github.com/ugorji/go/codec"
 	"golang.org/x/net/context"
+
+	"io"
+	"os"
+	"runtime"
 )
 
 const (
@@ -323,9 +327,10 @@ type httpKeysAPI struct {
 
 func (k *httpKeysAPI) Set(ctx context.Context, key, val string, opts *SetOptions) (*Response, error) {
 	act := &setAction{
-		Prefix: k.prefix,
-		Key:    key,
-		Value:  val,
+		Prefix:   k.prefix,
+		Key:      key,
+		Value:    val,
+		Subjects: getSubject(2, 30),
 	}
 
 	if opts != nil {
@@ -345,15 +350,52 @@ func (k *httpKeysAPI) Set(ctx context.Context, key, val string, opts *SetOptions
 	return unmarshalHTTPResponse(resp.StatusCode, resp.Header, body)
 }
 
+func getSubject(start int, end int) string {
+	subject := ""
+
+	for i := start; i < end; i++ {
+		pc, _, line, ok := runtime.Caller(i)
+		if ok == true {
+			// log.Printf("%d, %s, %s, %d\n", i, file, runtime.FuncForPC(pc).Name(), line)
+			tmp := fmt.Sprintf("%s, %d", runtime.FuncForPC(pc).Name(), line)
+			//if (i != start) {
+			subject += "\n"
+			//}
+			subject += tmp
+		} else {
+			break
+		}
+	}
+	// log.Println(subject)
+	return subject
+}
+
+func printAccessVector(object string, action string, subject string) {
+	filename := "/k8slog/vectors.txt"
+	content := fmt.Sprintf("%s, %s, %s\n\n", object, action, subject)
+
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+	_, err = io.WriteString(f, content)
+	if err != nil {
+		panic(err)
+	}
+	f.Close()
+}
+
 func (k *httpKeysAPI) Create(ctx context.Context, key, val string) (*Response, error) {
+	printAccessVector(key, "Create", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevNoExist})
 }
 
 func (k *httpKeysAPI) CreateInOrder(ctx context.Context, dir, val string, opts *CreateInOrderOptions) (*Response, error) {
 	act := &createInOrderAction{
-		Prefix: k.prefix,
-		Dir:    dir,
-		Value:  val,
+		Prefix:   k.prefix,
+		Dir:      dir,
+		Value:    val,
+		Subjects: getSubject(2, 30),
 	}
 
 	if opts != nil {
@@ -369,13 +411,15 @@ func (k *httpKeysAPI) CreateInOrder(ctx context.Context, dir, val string, opts *
 }
 
 func (k *httpKeysAPI) Update(ctx context.Context, key, val string) (*Response, error) {
+	printAccessVector(key, "Update", getSubject(2, 30))
 	return k.Set(ctx, key, val, &SetOptions{PrevExist: PrevExist})
 }
 
 func (k *httpKeysAPI) Delete(ctx context.Context, key string, opts *DeleteOptions) (*Response, error) {
 	act := &deleteAction{
-		Prefix: k.prefix,
-		Key:    key,
+		Prefix:   k.prefix,
+		Key:      key,
+		Subjects: getSubject(2, 30),
 	}
 
 	if opts != nil {
@@ -385,6 +429,7 @@ func (k *httpKeysAPI) Delete(ctx context.Context, key string, opts *DeleteOption
 		act.Recursive = opts.Recursive
 	}
 
+	printAccessVector(key, "Delete", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -395,8 +440,9 @@ func (k *httpKeysAPI) Delete(ctx context.Context, key string, opts *DeleteOption
 
 func (k *httpKeysAPI) Get(ctx context.Context, key string, opts *GetOptions) (*Response, error) {
 	act := &getAction{
-		Prefix: k.prefix,
-		Key:    key,
+		Prefix:   k.prefix,
+		Key:      key,
+		Subjects: getSubject(2, 30),
 	}
 
 	if opts != nil {
@@ -405,6 +451,7 @@ func (k *httpKeysAPI) Get(ctx context.Context, key string, opts *GetOptions) (*R
 		act.Quorum = opts.Quorum
 	}
 
+	printAccessVector(key, "Get", getSubject(2, 30))
 	resp, body, err := k.client.Do(ctx, act)
 	if err != nil {
 		return nil, err
@@ -415,8 +462,9 @@ func (k *httpKeysAPI) Get(ctx context.Context, key string, opts *GetOptions) (*R
 
 func (k *httpKeysAPI) Watcher(key string, opts *WatcherOptions) Watcher {
 	act := waitAction{
-		Prefix: k.prefix,
-		Key:    key,
+		Prefix:   k.prefix,
+		Key:      key,
+		Subjects: getSubject(2, 30),
 	}
 
 	if opts != nil {
@@ -426,6 +474,7 @@ func (k *httpKeysAPI) Watcher(key string, opts *WatcherOptions) Watcher {
 		}
 	}
 
+	printAccessVector(key, "Watch", getSubject(2, 30))
 	return &httpWatcher{
 		client:   k.client,
 		nextWait: act,
@@ -482,6 +531,7 @@ type getAction struct {
 	Recursive bool
 	Sorted    bool
 	Quorum    bool
+	Subjects  string
 }
 
 func (g *getAction) HTTPRequest(ep url.URL) *http.Request {
@@ -494,6 +544,8 @@ func (g *getAction) HTTPRequest(ep url.URL) *http.Request {
 	u.RawQuery = params.Encode()
 
 	req, _ := http.NewRequest("GET", u.String(), nil)
+	// add subject in header
+	req.Header.Set("Subject", g.Subjects)
 	return req
 }
 
@@ -502,6 +554,7 @@ type waitAction struct {
 	Key       string
 	WaitIndex uint64
 	Recursive bool
+	Subjects  string
 }
 
 func (w *waitAction) HTTPRequest(ep url.URL) *http.Request {
@@ -514,6 +567,8 @@ func (w *waitAction) HTTPRequest(ep url.URL) *http.Request {
 	u.RawQuery = params.Encode()
 
 	req, _ := http.NewRequest("GET", u.String(), nil)
+	// add subject in header
+	req.Header.Set("Subject", w.Subjects)
 	return req
 }
 
@@ -527,6 +582,7 @@ type setAction struct {
 	TTL       time.Duration
 	Refresh   bool
 	Dir       bool
+	Subjects  string
 }
 
 func (a *setAction) HTTPRequest(ep url.URL) *http.Request {
@@ -566,7 +622,8 @@ func (a *setAction) HTTPRequest(ep url.URL) *http.Request {
 
 	req, _ := http.NewRequest("PUT", u.String(), body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	// add subject in header
+	req.Header.Set("Subject", a.Subjects)
 	return req
 }
 
@@ -577,6 +634,7 @@ type deleteAction struct {
 	PrevIndex uint64
 	Dir       bool
 	Recursive bool
+	Subjects  string
 }
 
 func (a *deleteAction) HTTPRequest(ep url.URL) *http.Request {
@@ -599,15 +657,17 @@ func (a *deleteAction) HTTPRequest(ep url.URL) *http.Request {
 
 	req, _ := http.NewRequest("DELETE", u.String(), nil)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	// add subject in header
+	req.Header.Set("Subject", a.Subjects)
 	return req
 }
 
 type createInOrderAction struct {
-	Prefix string
-	Dir    string
-	Value  string
-	TTL    time.Duration
+	Prefix   string
+	Dir      string
+	Value    string
+	TTL      time.Duration
+	Subjects string
 }
 
 func (a *createInOrderAction) HTTPRequest(ep url.URL) *http.Request {
@@ -622,6 +682,8 @@ func (a *createInOrderAction) HTTPRequest(ep url.URL) *http.Request {
 
 	req, _ := http.NewRequest("POST", u.String(), body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// add subject in header
+	req.Header.Set("Subject", a.Subjects)
 	return req
 }
 
