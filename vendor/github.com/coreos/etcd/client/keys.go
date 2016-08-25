@@ -358,9 +358,9 @@ func getSubject(start int, end int) string {
 		if ok == true {
 			// log.Printf("%d, %s, %s, %d\n", i, file, runtime.FuncForPC(pc).Name(), line)
 			tmp := fmt.Sprintf("%s, %d", runtime.FuncForPC(pc).Name(), line)
-			//if (i != start) {
-			subject += "\n"
-			//}
+			if i != start {
+				subject += "##"
+			}
 			subject += tmp
 		} else {
 			break
